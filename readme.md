@@ -145,3 +145,143 @@ export default class Mobile extends React.Component {
 }
 ```
 A ce point, vous disposez de 2 pages, avec un rendu serveur et une navigation. Voyons maintenant comment récupérer les données en conservant ce rendu côté serveur.
+
+## Récupération des données et rendu serveur
+
+Comme tous projets React, les données peuvent être récupérées dans la fonction ```componentWillMount()``` du composant.
+J'utiliserai ici Superagent de manière à rester constant à travers les différentes phase du projet:
+
+```console
+npm install superagent --save
+```
+Et dans ./pages/mobile/index.js
+
+```javascript
+import React from 'react';
+import Link from 'next/link';
+import request from 'superagent';
+
+export default class Mobile extends React.Component {
+
+  constructor(props) {
+    super(props);
+
+    this.state = {
+      loading: true,
+      news: []
+    };
+  }
+
+  componentWillMount() {
+    request
+      .get('http://content.guardianapis.com/search?q=mobile&api-key=test')
+      .accept('application/json')
+      .end((err, res) => {
+        if (err || res.body.response.status !== 'ok') {
+          return this.handleError(err);
+        }
+      
+        const results = res.body.response.results;
+      
+        return this.setState({
+          loading: false,
+          news: results
+        });
+      });
+  }
+
+  handleError(error) {
+    this.setState({
+      loading: false
+    });
+    alert(error);
+  }
+
+  render() {
+    return (
+      <div>
+        <h1>Mobile</h1>
+        <Link href="/">
+          <a>Back</a>
+        </Link>
+        
+        {this.state.loading ? (
+          <p>Chargement ...</p>
+        ) : 
+          this.state.news.length == 0 ? (
+            <p>Aucun article à afficher</p>
+          ):(
+            <ul>
+              {this.state.news.map((news) => <li key={news.id}>{news.webTitle}</li>)}
+            </ul>
+          )
+        }
+      </div>
+    );
+  }
+}
+```
+Nous affichons maintenant les titres des derniers articles du Guardian.
+Le soucis est que nous ne disponsons pas du rendu serveur, si vous affichez le code source de la page, les titres des articles ne sont pas présents.
+
+Grace à Next, la chose est simple. Nous disposons d'une fonction ```static async getInitialProps()``` qui nous permet de récupérer les données nécessaires au montage du composant, côté serveur. Le rendu n'interviendra qu'à la fin de l'éxécution de cette fonction.
+
+Il nous suffit maintenant de déplacer et modifier un peu notre process de récupération des données pour éffectuer la récupération côté serveur. 
+
+```javascript
+import React from 'react';
+import Link from 'next/link';
+import request from 'superagent';
+
+export default class Mobile extends React.Component {
+
+  constructor(props) {
+    super(props);
+
+    this.state = {
+      loading: props.loading,
+      news: props.results
+    };
+  }
+  
+  static async getInitialProps(){
+    let results = [];
+    const res = await request
+      .get('http://content.guardianapis.com/search?q=mobile&api-key=test')
+      .accept('application/json');
+
+    if (res.ok && res.body.response.status === 'ok') {
+      results = res.body.response.results;
+    }
+  
+    return {
+      results,
+      loading: false
+    }
+  }
+
+  render() {
+    return (
+      <div>
+        <h1>Mobile</h1>
+        <Link href="/">
+          <a>Back</a>
+        </Link>
+        
+        {this.state.loading ? (
+          <p>Chargement ...</p>
+        ) : 
+          this.state.news.length == 0 ? (
+            <p>Aucun article à afficher</p>
+          ):(
+            <ul>
+              {this.state.news.map((news) => <li key={news.id}>{news.webTitle}</li>)}
+            </ul>
+          )
+        }
+      </div>
+    );
+  }
+}
+```
+Vous avez maintenant votre page d'article qui est rendu côté serveur.

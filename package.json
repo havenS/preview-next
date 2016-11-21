@@ -10,6 +10,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "next": "^1.1.2"
+    "next": "^1.1.2",
+    "superagent": "^3.0.0"
   }
 }
