@@ -34,7 +34,7 @@ export default class Mobile extends React.Component {
       <div>
         <h1>Mobile</h1>
         <Link href="/">
-          <a>Back</a>
+          <a>Retour</a>
         </Link>
         
         {this.state.loading ? (
